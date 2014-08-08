@@ -595,7 +595,7 @@ class SphinxClient:
 
         if isinstance(query, str):
             query = query.encode('utf-8')
-        assert (isinstance(query, str))
+        assert (isinstance(query, bytes))
 
         req.append(pack('>L', len(query)))
         req.append(query)
