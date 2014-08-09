@@ -236,7 +236,7 @@ class SphinxClient:
             return
 
         v = unpack('>L', sock.recv(4))
-        if v < 1:
+        if not v or v[0] < 1:
             sock.close()
             self._error = 'expected searchd protocol version, got %s' % v
             return
@@ -256,7 +256,7 @@ class SphinxClient:
         while left > 0:
             chunk = sock.recv(left)
             if chunk:
-                response += chunk
+                response += chunk.decode()
                 left -= len(chunk)
             else:
                 break
@@ -297,7 +297,7 @@ class SphinxClient:
             self._warning = 'searchd command v.%d.%d older than client\'s v.%d.%d, some options might not work' \
                             % (ver >> 8, ver & 0xff, client_ver >> 8, client_ver & 0xff)
 
-        return response
+        return response.encode()
 
 
     def _Send(self, sock, req):
@@ -588,13 +588,13 @@ class SphinxClient:
         req.append(pack('>5L', self._query_flags, self._offset, self._limit, self._mode, self._ranker))
         if self._ranker == SPH_RANK_EXPR:
             req.append(pack('>L', len(self._rankexpr)))
-            req.append(self._rankexpr)
+            req.append(self._rankexpr.encode())
         req.append(pack('>L', self._sort))
         req.append(pack('>L', len(self._sortby)))
-        req.append(self._sortby)
+        req.append(self._sortby.encode())
 
         if isinstance(query, str):
-            query = query.encode('utf-8')
+            query = query.encode()
         assert (isinstance(query, bytes))
 
         req.append(pack('>L', len(query)))
@@ -605,7 +605,7 @@ class SphinxClient:
             req.append(pack('>L', w))
         assert (isinstance(index, str))
         req.append(pack('>L', len(index)))
-        req.append(index)
+        req.append(index.encode())
         req.append(pack('>L', 1))  # id64 range marker
         req.append(pack('>Q', self._min_id))
         req.append(pack('>Q', self._max_id))
@@ -613,7 +613,7 @@ class SphinxClient:
         # filters
         req.append(pack('>L', len(self._filters)))
         for f in self._filters:
-            req.append(pack('>L', len(f['attr'])) + f['attr'])
+            req.append(pack('>L', len(f['attr'])) + f['attr'].encode())
             filtertype = f['type']
             req.append(pack('>L', filtertype))
             if filtertype == SPH_FILTER_VALUES:
@@ -628,12 +628,12 @@ class SphinxClient:
 
         # group-by, max-matches, group-sort
         req.append(pack('>2L', self._groupfunc, len(self._groupby)))
-        req.append(self._groupby)
+        req.append(self._groupby.encode())
         req.append(pack('>2L', self._maxmatches, len(self._groupsort)))
-        req.append(self._groupsort)
+        req.append(self._groupsort.encode())
         req.append(pack('>LLL', self._cutoff, self._retrycount, self._retrydelay))
         req.append(pack('>L', len(self._groupdistinct)))
-        req.append(self._groupdistinct)
+        req.append(self._groupdistinct.encode())
 
         # anchor point
         if len(self._anchor) == 0:
@@ -649,7 +649,7 @@ class SphinxClient:
         # per-index weights
         req.append(pack('>L', len(self._indexweights)))
         for indx, weight in list(self._indexweights.items()):
-            req.append(pack('>L', len(indx)) + indx + pack('>L', weight))
+            req.append(pack('>L', len(indx)) + indx.encode() + pack('>L', weight))
 
         # max query time
         req.append(pack('>L', self._maxquerytime))
@@ -657,11 +657,11 @@ class SphinxClient:
         # per-field weights
         req.append(pack('>L', len(self._fieldweights)))
         for field, weight in list(self._fieldweights.items()):
-            req.append(pack('>L', len(field)) + field + pack('>L', weight))
+            req.append(pack('>L', len(field)) + field.encode() + pack('>L', weight))
 
         # comment
         comment = str(comment)
-        req.append(pack('>L', len(comment)) + comment)
+        req.append(pack('>L', len(comment)) + comment.encode())
 
         # attribute overrides
         req.append(pack('>L', len(self._overrides)))
@@ -679,12 +679,12 @@ class SphinxClient:
 
         # select-list
         req.append(pack('>L', len(self._select)))
-        req.append(self._select)
+        req.append(self._select.encode())
         if self._predictedtime > 0:
             req.append(pack('>L', self._predictedtime))
 
         # outer
-        req.append(pack('>L', len(self._outerorderby)) + self._outerorderby)
+        req.append(pack('>L', len(self._outerorderby)) + self._outerorderby.encode())
         req.append(pack('>2L', self._outeroffset, self._outerlimit))
         if self._hasouter:
             req.append(pack('>L', 1))
@@ -692,7 +692,7 @@ class SphinxClient:
             req.append(pack('>L', 0))
 
         # send query, get response
-        req = ''.join(req)
+        req = b''.join(req)
 
         self._reqs.append(req)
         return
@@ -711,7 +711,7 @@ class SphinxClient:
         if not sock:
             return None
 
-        req = ''.join(self._reqs)
+        req = b''.join(self._reqs)
         length = len(req) + 8
         req = pack('>HHLLL', SEARCHD_COMMAND_SEARCH, VER_COMMAND_SEARCH, length, 0, len(self._reqs)) + req
         self._Send(sock, req)
@@ -867,7 +867,7 @@ class SphinxClient:
         if not opts:
             opts = {}
         if isinstance(words, str):
-            words = words.encode('utf-8')
+            words = words.encode()
 
         assert (isinstance(docs, list))
         assert (isinstance(index, str))
@@ -942,7 +942,7 @@ class SphinxClient:
         req.append(pack('>L', len(docs)))
         for doc in docs:
             if isinstance(doc, str):
-                doc = doc.encode('utf-8')
+                doc = doc.encode()
             assert (isinstance(doc, str))
             req.append(pack('>L', len(doc)))
             req.append(doc)
@@ -1176,7 +1176,7 @@ class SphinxClient:
         self._socket = None
 
     def EscapeString(self, string):
-        return re.sub(r"([=\(\)|\-!@~\"&/\\\^\$\=\<])", r"\\\1", string)
+        return re.sub(r"([=\(\)|\-!@~\"&/\\\^\$=<])", r"\\\1", string)
 
 
     def FlushAttributes(self):
