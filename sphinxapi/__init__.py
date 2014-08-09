@@ -739,7 +739,7 @@ class SphinxClient:
             if status != SEARCHD_OK:
                 length = unpack('>L', response[p:p + 4])[0]
                 p += 4
-                message = response[p:p + length]
+                message = response[p:p + length].decode()
                 p += length
 
                 if status == SEARCHD_WARNING:
