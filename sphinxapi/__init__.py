@@ -251,12 +251,12 @@ class SphinxClient:
         INTERNAL METHOD, DO NOT CALL. Gets and checks response packet from searchd server.
         """
         (status, ver, length) = unpack('>2HL', sock.recv(8))
-        response = ''
+        response = b''
         left = length
         while left > 0:
             chunk = sock.recv(left)
             if chunk:
-                response += chunk.decode()
+                response += chunk
                 left -= len(chunk)
             else:
                 break
@@ -281,11 +281,11 @@ class SphinxClient:
             return response[wend:]
 
         if status == SEARCHD_ERROR:
-            self._error = 'searchd error: ' + response[4:]
+            self._error = 'searchd error: ' + response[4:].decode()
             return None
 
         if status == SEARCHD_RETRY:
-            self._error = 'temporary searchd error: ' + response[4:]
+            self._error = 'temporary searchd error: ' + response[4:].decode()
             return None
 
         if status != SEARCHD_OK:
@@ -297,7 +297,7 @@ class SphinxClient:
             self._warning = 'searchd command v.%d.%d older than client\'s v.%d.%d, some options might not work' \
                             % (ver >> 8, ver & 0xff, client_ver >> 8, client_ver & 0xff)
 
-        return response.encode()
+        return response
 
 
     def _Send(self, sock, req):
