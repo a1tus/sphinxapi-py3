@@ -768,7 +768,7 @@ class SphinxClient:
                 nfields -= 1
                 length = unpack('>L', response[p:p + 4])[0]
                 p += 4
-                fields.append(response[p:p + length])
+                fields.append(response[p:p + length].decode())
                 p += length
 
             result['fields'] = fields
@@ -779,7 +779,7 @@ class SphinxClient:
                 nattrs -= 1
                 length = unpack('>L', response[p:p + 4])[0]
                 p += 4
-                attr = response[p:p + length]
+                attr = response[p:p + length].decode()
                 p += length
                 type_ = unpack('>L', response[p:p + 4])[0]
                 p += 4
@@ -816,7 +816,7 @@ class SphinxClient:
                         p += 4
                         match['attrs'][attrs[i][0]] = ''
                         if slen > 0:
-                            match['attrs'][attrs[i][0]] = response[p:p + slen]
+                            match['attrs'][attrs[i][0]] = response[p:p + slen].decode()
                         p += slen - 4
                     elif attrs[i][1] == SPH_ATTR_FACTORS:
                         slen = unpack('>L', response[p:p + 4])[0]
@@ -859,7 +859,7 @@ class SphinxClient:
                 words -= 1
                 length = unpack('>L', response[p:p + 4])[0]
                 p += 4
-                word = response[p:p + length]
+                word = response[p:p + length].decode()
                 p += length
                 docs, hits = unpack('>2L', response[p:p + 8])
                 p += 8
